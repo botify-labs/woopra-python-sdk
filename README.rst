@@ -12,14 +12,14 @@ Installation
 
 Usage
 =====
-The first step is to setup the tracker SDK. To do so, configure the tracker instance as follows (replace mybusiness.com with your website as registered on Woopra):
+The first step is to setup the tracker SDK. To do so, configure the tracker instance as follows (replace mybusiness.com with your website as registered on Woopra and access_key with your Woopra API access key, encoded in base64):
 
 ::
 
    #import the SDK
    from woopra import WoopraTracker
 
-   woopra = WoopraTracker("mybusiness.com")
+   woopra_tracker = WoopraTracker("mybusiness.com", "access_key")
 
 
 You can also configure the timeout (in milliseconds, defaults to 30000 - equivalent to 30 seconds) after which the event will expire and the visit will be marked as offline:
@@ -27,18 +27,18 @@ You can also configure the timeout (in milliseconds, defaults to 30000 - equival
 ::
 
    # set the timeout to 15seconds:
-   woopra.set_timeout(15000)
+   woopra_tracker.set_timeout(15000)
 
-To identify a user, you should use the <code>identify()</code> function. You can choose to identify the visitor with his EMAIL, or with a UNIQUE_ID of your choice (in this case, make sure to re-use the same ID for a given visitor accross different visits).
+To identify a user, you should use the identify() function. You can choose to identify the visitor with his EMAIL, or with a UNIQUE_ID of your choice (in this case, make sure to re-use the same ID for a given visitor accross different visits).
 
 ::
 
-   woopra.identify(WoopraTracker.EMAIL ,
+   user_properties = woopra_tracker.identify(WoopraTracker.EMAIL,
       "johndoe@mybusiness.com", {
           'name' : 'Test Name2',
           'admin' : False
       }, IP_ADDRESS, # the IP address of the user
-      USER_AGENT /# the user agent
+      USER_AGENT # the user agent
     )
 
 
@@ -46,7 +46,7 @@ And you're ready to start tracking events:
 
 ::
 
-   woopra.track("play", {
+   woopra_tracker.track_event(user_properties, "play", {
   "artist" : "Dave Brubeck"},
   "song" : "Take Five"},
   "genre" : "Jazz"}
@@ -56,4 +56,10 @@ And you're ready to start tracking events:
 Or just push the user information (without event tracking) by doing:
 ::
 
-   woopra.push()
+   woopra_tracker.track_identify(user_properties)
+
+
+The search profile API is also supported:
+::
+
+   woopra_tracker.search_profile(user_properties)
