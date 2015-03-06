@@ -1,129 +1,163 @@
 # -*- coding: utf-8 -*-
 
 import urllib
-import httplib
+import urllib2
 import hashlib
 
-class WoopraTracker:
-	"""
-	Woopra Python SDK.
-	This class represents the Python equivalent of the JavaScript Woopra Object.
-	"""
 
-	SDK_ID = "python"
-	DEFAULT_TIMEOUT = 300000
-	EMAIL = "email"
-	UNIQUE_ID = "unique_id"
+class WoopraUnknownIdentifierException(Exception):
+    """
+    This exception is thrown when trying to identify() with an unsupported value.
+    """
+    pass
 
-	def __init__(self, domain):
-		"""
-		The constructor.
-		Parameter:
-			domain - str : the domain name of your website as submitted on woopra.com
-		Result:
-			WoopraTracker
-		"""
-		self.domain = domain
-		self.idle_timeout = WoopraTracker.DEFAULT_TIMEOUT
-		self.user_properties = {}
-		self.cookie_value = None
-		self.user_agent = None
-		self.ip_addresss = None
 
-	def identify(self, identifier, value, user_properties = {}, ip_address = None, user_agent = None):
-		"""
-		Identifies a user.
-		Parameters:
-			identifier:
-				WoopraTracker.EMAIL to identify the user with his email (will generate unique ID automatically with a hash of the email)
-				WoopraTracker.UNIQUE_ID to identify the user with a unique ID directly
-			value - str : the value of the identifier (email or unique ID)
-			properties (optional) - dict : the user's additional properties (name, company, ...)
-				key - str : the user property name
-				value -str, int, bool = the user property value
-			ip_address (optional) - str : the IP address of the user.
-			user_agent (optional) - str : the value of the user_agent header
-		"""
-		if identifier == WoopraTracker.EMAIL:
-			self.user_agent = user_agent
-			self.ip_address = ip_address
-			self.user_properties = user_properties
-			self.user_properties["email"] = value
-			m = hashlib.md5()
-			m.update(value)
-			long_cookie = m.hexdigest().upper()
-			self.cookie_value = (long_cookie[:12]) if len(long_cookie) > 12 else long_cookie
-		elif identifier == WoopraTracker.UNIQUE_ID:
-			self.user_agent = user_agent
-			self.ip_address = ip_address
-			self.user_properties = user_properties
-			self.cookie_value = value
-		else:
-			print "Wrong identifier. Accepted values are WoopraTracker.EMAIL or WoopraTracker.UNIQUE_ID"
+class WoopraUserProperties(object):
+    """
+    This class represents a Woopra user's information.
+    """
 
-	def track(self, event_name, event_data = {}):
-		"""
-		Tracks pageviews and custom events
-		Parameters:
-			event_name (optional) - str : The name of the event. If none is specified, will track pageview
-			event_data (optional) - dict : Properties the custom event
-				key - str : the event property name
-				value - str, int, bool : the event property value
-		Examples:
-			# This code tracks a custom event through the back-end:
-			woopra.track('signup', {'company' : 'My Business', 'username' : 'johndoe', 'plan' : 'Gold'})
-		"""
-		self.woopra_http_request(True, event_name, event_data)
+    def __init__(self, user_agent, ip_address, user_properties, email, cookie):
+        self.user_properties = user_properties
+        self.cookie = cookie
+        self.user_agent = user_agent
+        self.ip_address = ip_address
+        self.email = email
 
-	def push(self):
-		"""
-		Pushes the indentification information on the user to Woopra in case no tracking event occurs.
-		Parameter:
-			back_end_tracking (optional) - boolean : Should the information be pushed through the back-end? Defaults to False.
-		Result:
-			None
-		"""
-		self.woopra_http_request(False)
 
-	def woopra_http_request(self, is_tracking, event_name = None, event_data = {}):
-		"""
-		Sends an Http Request to Woopra for back-end identification and/or tracking.
-		Parameters:
-			isTracking - boolean : is this request supposed to track an event or just identify the user?
-			event (optional) - dict : only matters if isTracking == True. The event to pass. Default is None.
-		Result:
-			None
-		"""
-		base_url = "www.woopra.com"
-		get_params = {}
+class WoopraTracker(object):
+    """
+    Woopra Python SDK.
+    This class represents the Python equivalent of the JavaScript Woopra Object.
+    """
 
-		# Configuration
-		get_params["host"] = self.domain
-		get_params["cookie"] = self.cookie_value
-		if self.ip_address != None:
-			get_params["ip"] = self.ip_address
-		if self.idle_timeout != None:
-			get_params["timeout"] = self.idle_timeout
+    SDK_ID = "python"
+    DEFAULT_TIMEOUT = 300000
+    EMAIL = "email"
+    UNIQUE_ID = "unique_id"
+    BASE_URL = "http://www.woopra.com"
 
-		# Identification
-		for k, v in self.user_properties.iteritems():
-			get_params["cv_" + k] = v
+    def __init__(self, domain, access_key):
+        """
+        The constructor.
+        Parameter:
+            domain - str : the domain name of your website as submitted on woopra.com
+        Result:
+            WoopraTracker
+        """
+        self.domain = domain
+        self.idle_timeout = WoopraTracker.DEFAULT_TIMEOUT
+        self.access_key = access_key
 
-		if not is_tracking:
-			url = "/track/identify/?" + urllib.urlencode(get_params) + "&ce_app=" + WoopraTracker.SDK_ID
-		else:
-			get_params["ce_name"] = event_name
-			for k,v in event_data.iteritems():
-				get_params["ce_" + k] = v
-			url = "/track/ce/?" + urllib.urlencode(get_params) + "&ce_app=" + WoopraTracker.SDK_ID
-		try:
-			conn = httplib.HTTPConnection(base_url)
-			if self.user_agent != None:
-				conn.request("GET", url, headers={'User-agent': self.user_agent})
-			else:
-				conn.request("GET", url)
-		except HTTPException:
-			print "exception occured"
+    def identify(self, identifier, value, user_properties={}, ip_address=None, user_agent=None):
+        """
+        Identifies a user.
+        Parameters:
+            identifier:
+                WoopraTracker.EMAIL to identify the user with his email (will generate unique ID automatically with a hash of the email)
+                WoopraTracker.UNIQUE_ID to identify the user with a unique ID directly
+            value - str : the value of the identifier (email or unique ID)
+            user_properties (optional) - dict : the user's additional properties (name, company, ...)
+                key - str : the user property name
+                value -str, int, bool = the user property value
+            ip_address (optional) - str : the IP address of the user.
+            user_agent (optional) - str : the value of the user_agent header
+        """
+        if identifier == WoopraTracker.EMAIL:
+            m = hashlib.md5()
+            m.update(value)
+            long_cookie = m.hexdigest().upper()
+            cookie = (long_cookie[:12]) if len(long_cookie) > 12 else long_cookie
+            return WoopraUserProperties(user_agent, ip_address, user_properties, value, cookie)
+        elif identifier == WoopraTracker.UNIQUE_ID:
+            return WoopraUserProperties(user_agent, ip_address, user_properties, None, value)
+        raise WoopraUnknownIdentifierException
 
-	def set_timeout(self, timeout):
-		self.idle_timeout = timeout
+    def get_params(self, user_properties):
+        params = {}
+        # Configuration
+        params["host"] = self.domain
+        params["cookie"] = user_properties.cookie
+        if user_properties.ip_address is not None:
+            params["ip"] = user_properties.ip_address
+        if self.idle_timeout is not None:
+            params["timeout"] = self.idle_timeout
+        # Identification
+        params["cv_email"] = user_properties.email
+        for k, v in user_properties.user_properties.iteritems():
+            params["cv_" + k] = v
+        return params
+
+    def track_event(self, user_properties, event_name, event_data={}):
+        """
+        Tracks pageviews and custom events
+        Parameters:
+            user_properties - WoopraUserProperties : returned by call to identify()
+            event_name - str : The name of the event
+            event_data - dict : Properties the custom event
+                key - str : the event property name
+                value - str, int, bool : the event property value
+        Result:
+            urllib2.Response : result of the API call
+        Examples:
+            # This code tracks a custom event through the back-end:
+            woopra.track('signup', {'company' : 'My Business', 'username' : 'johndoe', 'plan' : 'Gold'})
+        """
+        params = self.get_params(user_properties)
+        params["ce_name"] = event_name
+        for k, v in event_data.iteritems():
+            params["ce_" + k] = v
+        url = "/track/ce/?" + urllib.urlencode(params) + "&response=json&ce_app=" + WoopraTracker.SDK_ID
+        return self.woopra_http_request(user_properties, url)
+
+    def track_identify(self, user_properties):
+        """
+        Pushes the indentification information on the user to Woopra in case no tracking event occurs.
+        Parameter:
+            user_properties - WoopraUserProperties : returned by call to identify()
+        Result:
+            urllib2.Response : result of the API call
+        """
+        params = self.get_params(user_properties)
+        url = "/track/identify/?" + urllib.urlencode(params) + "&response=json&ce_app=" + WoopraTracker.SDK_ID
+        return self.woopra_http_request(user_properties, url)
+
+    def search_profile(self, user_properties):
+        """
+        Pushes the indentification information on the user to Woopra in case no tracking event occurs.
+        Parameter:
+            user_properties - WoopraUserProperties : returned by call to identify()
+        Result:
+            urllib2.Response : result of the API call
+        """
+        url = "/rest/2.2/profile"
+        data = {'website': self.domain, 'email': user_properties.email}
+        return self.woopra_http_request(user_properties, url, data)
+
+    def woopra_http_request(self, user_properties, url, data=None):
+        """
+        Sends an HTTP Request to Woopra
+        Parameters:
+            user_properties - WoopraUserProperties : returned by call to identify()
+            url - string : API url to call without http://www.woopra.com
+            data - dict (optional) : POST data
+        Result:
+            urllib2.Response : result of the API call
+        """
+        if data:
+            headers = {'User-agent': user_properties.user_agent, 'Authorization': 'Basic ' + self.access_key}
+            req = urllib2.Request(self.BASE_URL + url, urllib.urlencode(data), headers)
+        else:
+            req = urllib2.Request(self.BASE_URL + url)
+        resp = urllib2.urlopen(req)
+        return resp
+
+    def set_timeout(self, timeout):
+        """
+        Sets the Woopra request timeout.
+        Parameter:
+            timeout - the new timeout
+        Result:
+            None
+        """
+        self.idle_timeout = timeout
