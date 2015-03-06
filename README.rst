@@ -46,11 +46,11 @@ And you're ready to start tracking events:
 
 ::
 
-   woopra_tracker.track_event(user_properties, "play", {
-  "artist" : "Dave Brubeck"},
-  "song" : "Take Five"},
-  "genre" : "Jazz"}
-})
+    woopra_tracker.track_event(user_properties, "play",
+                               {"artist": "Dave Brubeck",
+                                "song": "Take Five",
+                                "genre": "Jazz"
+                                })
 
 
 Or just push the user information (without event tracking) by doing:
