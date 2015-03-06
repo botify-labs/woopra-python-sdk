@@ -42,6 +42,7 @@ class WoopraTracker(object):
         The constructor.
         Parameter:
             domain - str : the domain name of your website as submitted on woopra.com
+            access_key - str : your woopra.com API access key
         Result:
             WoopraTracker
         """
@@ -74,6 +75,13 @@ class WoopraTracker(object):
         raise WoopraUnknownIdentifierException
 
     def get_params(self, user_properties):
+        """
+        Returns GET parameters required in most Woopra HTTP requests
+        Parameters:
+            user_properties - WoopraUserProperties : returned by call to identify()
+        Result:
+            dict : GET parameters
+        """
         params = {}
         # Configuration
         params["host"] = self.domain
