@@ -12,7 +12,7 @@ class WoopraUnknownIdentifierException(Exception):
     pass
 
 
-class WoopraUserProperties(object):
+class WoopraUser(object):
     """
     This class represents a Woopra user's information.
     """
@@ -55,7 +55,8 @@ class WoopraTracker(object):
         Identifies a user.
         Parameters:
             identifier:
-                WoopraTracker.EMAIL to identify the user with his email (will generate unique ID automatically with a hash of the email)
+                WoopraTracker.EMAIL to identify the user with his email (will generate unique ID automatically with
+                    a hash of the email)
                 WoopraTracker.UNIQUE_ID to identify the user with a unique ID directly
             value - str : the value of the identifier (email or unique ID)
             user_properties (optional) - dict : the user's additional properties (name, company, ...)
@@ -69,16 +70,16 @@ class WoopraTracker(object):
             m.update(value)
             long_cookie = m.hexdigest().upper()
             cookie = (long_cookie[:12]) if len(long_cookie) > 12 else long_cookie
-            return WoopraUserProperties(user_agent, ip_address, user_properties, value, cookie)
+            return WoopraUser(user_agent, ip_address, user_properties, value, cookie)
         elif identifier == WoopraTracker.UNIQUE_ID:
-            return WoopraUserProperties(user_agent, ip_address, user_properties, None, value)
-        raise WoopraUnknownIdentifierException
+            return WoopraUser(user_agent, ip_address, user_properties, None, value)
+        raise WoopraUser
 
     def get_params(self, user_properties):
         """
         Returns GET parameters required in most Woopra HTTP requests
         Parameters:
-            user_properties - WoopraUserProperties : returned by call to identify()
+            user_properties - WoopraUser : returned by call to identify()
         Result:
             dict : GET parameters
         """
@@ -100,7 +101,7 @@ class WoopraTracker(object):
         """
         Tracks pageviews and custom events
         Parameters:
-            user_properties - WoopraUserProperties : returned by call to identify()
+            user_properties - WoopraUser : returned by call to identify()
             event_name - str : The name of the event
             event_data - dict : Properties the custom event
                 key - str : the event property name
@@ -116,37 +117,38 @@ class WoopraTracker(object):
         for k, v in event_data.iteritems():
             params["ce_" + k] = v
         url = "/track/ce/?" + urllib.urlencode(params) + "&response=json&ce_app=" + WoopraTracker.SDK_ID
-        return self.woopra_http_request(user_properties, url)
+        print url
+        return self._woopra_http_request(user_properties, url)
 
     def track_identify(self, user_properties):
         """
         Pushes the indentification information on the user to Woopra in case no tracking event occurs.
         Parameter:
-            user_properties - WoopraUserProperties : returned by call to identify()
+            user_properties - WoopraUser : returned by call to identify()
         Result:
             urllib2.Response : result of the API call
         """
         params = self.get_params(user_properties)
         url = "/track/identify/?" + urllib.urlencode(params) + "&response=json&ce_app=" + WoopraTracker.SDK_ID
-        return self.woopra_http_request(user_properties, url)
+        return self._woopra_http_request(user_properties, url)
 
     def search_profile(self, user_properties):
         """
-        Pushes the indentification information on the user to Woopra in case no tracking event occurs.
+        Retrieves a detailed visitor profile.
         Parameter:
-            user_properties - WoopraUserProperties : returned by call to identify()
+            user_properties - WoopraUser : returned by call to identify()
         Result:
             urllib2.Response : result of the API call
         """
         url = "/rest/2.2/profile"
         data = {'website': self.domain, 'email': user_properties.email}
-        return self.woopra_http_request(user_properties, url, data)
+        return self._woopra_http_request(user_properties, url, data)
 
-    def woopra_http_request(self, user_properties, url, data=None):
+    def _woopra_http_request(self, user_properties, url, data=None):
         """
         Sends an HTTP Request to Woopra
         Parameters:
-            user_properties - WoopraUserProperties : returned by call to identify()
+            user_properties - WoopraUser : returned by call to identify()
             url - string : API url to call without http://www.woopra.com
             data - dict (optional) : POST data
         Result:
