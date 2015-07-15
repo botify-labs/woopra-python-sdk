@@ -94,7 +94,10 @@ class WoopraTracker(object):
         # Identification
         params["cv_email"] = user_properties.email
         for k, v in user_properties.user_properties.iteritems():
-            params["cv_" + k] = v.encode('utf-8')
+            if isinstance(v, str):
+                params["ce_" + k] = v.encode('utf-8')
+            else:
+                params["ce_" + k] = v
         return params
 
     def track_event(self, user_properties, event_name, event_data={}):
@@ -115,7 +118,10 @@ class WoopraTracker(object):
         params = self.get_params(user_properties)
         params["ce_name"] = event_name
         for k, v in event_data.iteritems():
-            params["ce_" + k] = v.encode('utf-8')
+            if isinstance(v, str):
+                params["ce_" + k] = v.encode('utf-8')
+            else:
+                params["ce_" + k] = v
         url = "/track/ce/?" + urllib.urlencode(params) + "&response=json&ce_app=" + WoopraTracker.SDK_ID
         return self._woopra_http_request(user_properties, url)
 
