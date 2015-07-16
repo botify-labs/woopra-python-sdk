@@ -94,7 +94,7 @@ class WoopraTracker(object):
         # Identification
         params["cv_email"] = user_properties.email
         for k, v in user_properties.user_properties.iteritems():
-            if isinstance(v, str):
+            if isinstance(v, basestring):
                 params["cv_" + k] = v.encode('utf-8')
             else:
                 params["cv_" + k] = v
@@ -118,7 +118,7 @@ class WoopraTracker(object):
         params = self.get_params(user_properties)
         params["ce_name"] = event_name
         for k, v in event_data.iteritems():
-            if isinstance(v, str):
+            if isinstance(v, basestring):
                 params["ce_" + k] = v.encode('utf-8')
             else:
                 params["ce_" + k] = v
