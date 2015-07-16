@@ -95,9 +95,9 @@ class WoopraTracker(object):
         params["cv_email"] = user_properties.email
         for k, v in user_properties.user_properties.iteritems():
             if isinstance(v, str):
-                params["ce_" + k] = v.encode('utf-8')
+                params["cv_" + k] = v.encode('utf-8')
             else:
-                params["ce_" + k] = v
+                params["cv_" + k] = v
         return params
 
     def track_event(self, user_properties, event_name, event_data={}):
